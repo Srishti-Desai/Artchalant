@@ -1,27 +1,33 @@
 import streamlit as st
 import numpy as np
-import tensorflow as tf
-from tensorflow.keras.preprocessing import image
 from PIL import Image
+from tensorflow.keras.models import load_model
 
-# Load model
-model = tf.keras.models.load_model("model.h5")
+st.set_page_config(page_title="AI vs Human Art Detector")
 
-st.title("Artchalant - AI vs Human Image Detector")
+# Load model (CHANGE NAME if needed)
+model = load_model("model.h5")
 
-uploaded_file = st.file_uploader("Upload an image", type=["jpg", "jpeg", "png"])
+st.title("AI vs Human Art Detector")
+
+uploaded_file = st.file_uploader("Upload an artwork", type=["jpg","jpeg","png"])
+
+def preprocess(image):
+    image = image.resize((224,224))
+    image = np.array(image)/255.0
+    image = np.expand_dims(image, axis=0)
+    return image
 
 if uploaded_file is not None:
-    img = Image.open(uploaded_file).resize((224, 224))
-    st.image(img, caption="Uploaded Image", use_column_width=True)
+    image = Image.open(uploaded_file).convert("RGB")
+    st.image(image)
 
-    img_array = image.img_to_array(img)
-    img_array = np.expand_dims(img_array, axis=0)
-    img_array = img_array / 255.0
+    processed = preprocess(image)
+    prediction = model.predict(processed)[0][0]
 
-    prediction = model.predict(img_array)
-
-    if prediction[0][0] > 0.5:
-        st.success("This looks like an AI-generated image 🤖")
+    if prediction > 0.5:
+        st.success("Ai Art")
+        st.write(f"Confidence: {prediction:.2%}")
     else:
-        st.success("This looks like a Human-made image 🎨")
+        st.error("Human art")
+        st.write(f"Confidence: {(1-prediction):.2%}")
